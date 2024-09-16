@@ -22,7 +22,10 @@ spec:
         - --ip=0.0.0.0
         env:
         - name: JUPYTER_NOTEBOOK_PASSWORD
-          value: {{ .Values.password }}
+          valueFrom:
+            secretKeyRef:
+              name: notebook-secret
+              key: password
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: jupyter-notebook
