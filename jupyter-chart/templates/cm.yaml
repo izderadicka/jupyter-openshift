@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: "2024-09-15T09:47:29Z"
+  labels:
+    app: notebook
+  name: notebook-cfg
+data:
+  jupyter_server_config.py: |
+    import os
+
+    password = os.environ.get('JUPYTER_NOTEBOOK_PASSWORD')
+
+    if password:
+        from jupyter_server.auth import passwd
+        c.ServerApp.password = passwd(password)
+        del password
+        del os.environ['JUPYTER_NOTEBOOK_PASSWORD']
+
+    image_config_file = '/home/jovyan/.jupyter/jupyter_server_config.py'
+
+    if os.path.exists(image_config_file):
+        with open(image_config_file) as fp:
+            exec(compile(fp.read(), image_config_file, 'exec'), globals())

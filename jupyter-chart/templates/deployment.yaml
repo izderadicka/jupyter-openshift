@@ -1,68 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "jupyter-chart.fullname" . }}
   labels:
-    {{- include "jupyter-chart.labels" . | nindent 4 }}
+    app: notebook
+  name: notebook
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: 1
   selector:
     matchLabels:
-      {{- include "jupyter-chart.selectorLabels" . | nindent 6 }}
+      app: notebook
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "jupyter-chart.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        app: notebook
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "jupyter-chart.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
+      - command:
+        - start-notebook.py
+        - --config=/etc/jupyter/openshift/jupyter_server_config.py
+        - --no-browser
+        - --ip=0.0.0.0
+        env:
+        - name: JUPYTER_NOTEBOOK_PASSWORD
+          value: {{ .Values.password }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: jupyter-notebook
+        ports:
+        - containerPort: 8888
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /etc/jupyter/openshift
+          name: configs
+        - mountPath: /home/jovyan
+          name: notebook-data
+      restartPolicy: Always
+      securityContext:
+        supplementalGroups:
+        - 100
       volumes:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      - configMap:
+          defaultMode: 420
+          name: notebook-cfg
+        name: configs
+      - name: notebook-data
+        persistentVolumeClaim:
+          claimName: notebook-data
