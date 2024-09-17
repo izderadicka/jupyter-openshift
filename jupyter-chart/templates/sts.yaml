@@ -1,18 +1,18 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  labels:
-    app: notebook
   name: notebook
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: notebook
+      app: notebook # has to match .spec.template.metadata.labels
+  serviceName: notebook
+  replicas: 1 # only one replika is supported
+  minReadySeconds: 10 # by default is 0
   template:
     metadata:
       labels:
-        app: notebook
+        app: notebook # has to match .spec.selector.matchLabels
     spec:
       containers:
       - command:
@@ -46,7 +46,17 @@ spec:
       - configMap:
           defaultMode: 420
           name: notebook-cfg
-        name: configs
-      - name: notebook-data
-        persistentVolumeClaim:
-          claimName: notebook-data
+        name: configs    
+  volumeClaimTemplates:
+  - metadata:
+      name: notebook-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+          requests:
+            storage: {{ .Values.volume.size }}
+      {{- if ne .Values.volume.storageClass "" }}
+      storageClassName: {{ .Values.volume.storageClass }}
+      {{- end }}
+      volumeMode: Filesystem

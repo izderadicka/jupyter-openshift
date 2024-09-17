@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app: notebook
-  name: notebook
+  name: notebook-external
 spec:
   ports:
   - name: 8888-tcp
@@ -11,6 +11,5 @@ spec:
     protocol: TCP
     targetPort: 8888
   selector:
-    app: notebook
+    statefulset.kubernetes.io/pod-name: notebook-0
   type: ClusterIP
-  clusterIP: None
