@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: notebook
+  labels:
+    app: notebook
+spec:
+  containers:
+  - command:
+    - start-notebook.py
+    - --config=/etc/jupyter/openshift/jupyter_server_config.py
+    - --no-browser
+    - --ip=0.0.0.0
+    env:
+    - name: JUPYTER_NOTEBOOK_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: notebook-secret
+          key: password
+    image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+    imagePullPolicy: {{ .Values.image.pullPolicy }}
+    name: jupyter-notebook
+    ports:
+    - containerPort: 8888
+      protocol: TCP
+    resources: {}
+    volumeMounts:
+    - mountPath: /etc/jupyter/openshift
+      name: configs
+    - mountPath: /home/jovyan
+      name: notebook-data
+  restartPolicy: Always
+  securityContext:
+    supplementalGroups:
+    - 100
+  volumes:
+  - configMap:
+      defaultMode: 420
+      name: notebook-cfg
+    name: configs
+  - name: notebook-data
+    persistentVolumeClaim:
+      claimName: notebook-data
